@@ -1,0 +1,17 @@
+*.jar
+*.un~
+*.swp
+tags
+target
+*/project/
+project/boot
+.history
+project.vim
+*.old
+.idea
+.project
+.classpath
+.metadata/
+
+.ensime
+.ensime_cache/
