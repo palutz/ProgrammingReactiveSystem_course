@@ -13,7 +13,7 @@ object Async {
     * should return a failed `Future` with the same error.
     */
   def transformSuccess(eventuallyX: Future[Int]): Future[Boolean] =
-    ???
+    eventuallyX.map(ex => ex % 2 == 0).recoverWith{ case e : Exception => Future.failed(e) }
 
   /**
     * Transforms a failed asynchronous `Int` computation into a
@@ -23,7 +23,7 @@ object Async {
     * should return a successful `Future` with the same value.
     */
   def recoverFailure(eventuallyX: Future[Int]): Future[Int] =
-    ???
+    eventuallyX.map(x => x).recoverWith { case _ => Future.successful(-1) }
 
   /**
     * Perform two asynchronous computation, one after the other. `makeAsyncComputation2`
@@ -38,7 +38,12 @@ object Async {
     makeAsyncComputation1: () => Future[A],
     makeAsyncComputation2: () => Future[B]
   ): Future[(A, B)] =
-    ???
+    // makeAsyncComputation1().flatMap(a1 => makeAsyncComputation2().map(a2 => (a1, a2)))
+    // or..
+    for {
+      a1 <- makeAsyncComputation1()
+      a2 <- makeAsyncComputation2()
+    } yield (a1, a2)
 
   /**
     * Concurrently perform two asynchronous computations and pair their successful
