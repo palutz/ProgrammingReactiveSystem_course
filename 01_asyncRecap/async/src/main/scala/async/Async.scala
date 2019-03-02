@@ -55,7 +55,7 @@ object Async {
     makeAsyncComputation1: () => Future[A],
     makeAsyncComputation2: () => Future[B]
   ): Future[(A, B)] =
-    ???
+    makeAsyncComputation1() zip makeAsyncComputation2()
 
   /**
     * Attempt to perform an asynchronous computation.
@@ -64,6 +64,9 @@ object Async {
     * are eventually performed.
     */
   def insist[A](makeAsyncComputation: () => Future[A], maxAttempts: Int): Future[A] =
-    ???
+    makeAsyncComputation().recoverWith {
+      case _ if (maxAttempts > 1) => insist(makeAsyncComputation, maxAttempts - 1)
+    }
 
-}
+
+  }
