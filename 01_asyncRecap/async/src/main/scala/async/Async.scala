@@ -13,7 +13,7 @@ object Async {
     * should return a failed `Future` with the same error.
     */
   def transformSuccess(eventuallyX: Future[Int]): Future[Boolean] =
-    eventuallyX.map(ex => ex % 2 == 0).recoverWith{ case e : Exception => Future.failed(e) }
+    eventuallyX.map(ex => ex % 2 == 0).recoverWith{ case NonFatal(e) => Future.failed(e) }
 
   /**
     * Transforms a failed asynchronous `Int` computation into a
