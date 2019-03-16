@@ -24,7 +24,7 @@ class Counter extends Actor {
 
 class CounterMain extends Actor {
   val counter = context.actorOf(Props[Counter], "counter")
-  def receive = {
+  def inner : Receive = {
     case n : Int => println("CounterMain received " + n)
     case "add" => {
       println("CounterMain add")
@@ -34,6 +34,10 @@ class CounterMain extends Actor {
       println("CounterMain get")
       counter ! "get"
     }
+  }
+  def receive = {
+    println("CounterMain receive")
+    inner
   }
 }
 
@@ -47,8 +51,27 @@ object IntroToActor extends App {
   cm ! "add"
   cm ! "add"
   cm ! "add"
+  cm ! "tot"
   println("going to sleep....")
   Thread.sleep(1000)
   println("terminating...")
   ctx.terminate()
 }
+
+/* Output in this configuration:
+ Starting...
+ sleep after creating CounterMain...
+ CounterMain receive
+ receive
+ sending msg to main actor
+ going to sleep....
+ CounterMain add
+ CounterMain add
+ CounterMain add
+ n=0
+ CounterMain get
+ n=1
+ n=2
+ CounterMain received 3
+ terminating...
+ */
