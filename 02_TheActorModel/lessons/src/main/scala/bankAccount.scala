@@ -1,6 +1,6 @@
 package a.lesson02
 
-import akka.actor.{Actor, Props, ActorSystem }
+import akka.actor.{Actor, Props, ActorSystem, ActorRef }
 
 object BankAccount {
   case class Deposit(amount : BigInt) {
@@ -31,4 +31,21 @@ class BankAccount extends Actor {
   }
 
   def receive = inner(0)
+}
+
+object WireTransfer {
+  case class Transfer(from : ActorRef, to: ActorRef, amount: BigInt)
+  case object Done
+  case object Failed
+}
+
+class WireTransfer extends Actor {
+  import WireTransfer._
+
+  def receive = {
+    case Transfer(from, to, amount) =>
+      from ! BankAccount.Withdraw(amount)
+      context.become(awaitWithDraw(to, amount, sender))  // await for confirmation of withdraw (actor like suspends itself)
+
+  }
 }
