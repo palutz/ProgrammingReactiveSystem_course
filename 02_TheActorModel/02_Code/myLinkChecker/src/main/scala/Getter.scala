@@ -1,28 +1,57 @@
 package it.stefano.linkChecker
 
+
+import scala.concurrent.{Future, Promise}
+import akka.actor.Actor
+import akka.pattern.pipe
+import java.util.concurrent.Executor
+import akka.actor.ActorLogging
+import akka.actor.Status
+import scala.concurrent.ExecutionContext
+import org.jsoup.Jsoup
+import scala.collection.JavaConverters._
 import com.ning.http.client.AsyncHttpClient
+
 
 /* *****************
  This actor will process the body of the web page
-
  * **************** */
 
-trait WebClient {
-  def get(url: String) : String 
-}
 
-case class BadStatus(code : Int) extends RuntimeException
+class Getter(url: String, depth: Int) extends Actor with ActorLogging {
+  implicit val executor = context.dispatcher.asInstanceOf[Executor with ExecutionContext]
+  private val client = new MyAsyncWebClient
 
-object Getter extends WebClient {
+  // v1) with onComplete
+  // val f = client get url
+  // f onComplete {
+  //   case Success(body) => self ! body
+  //   case Failure(e) => self ! Status.Failure(e)
+  // }
 
-  val client = new AsyncHttpClient
+  // v2) with pipeTo
+  // val f = client get url
+  // f pipeTo self
 
-  def get(url: String): String = {
-    val r = client.prepareGet(url).execute().get()
-    var rc = r.getStatusCode
-    if(rc < 400)
-      r.getResponseBodyExcerpt(131072)
-    else
-      throw BadStatus(rc)
+  // v3) all together
+  client get url pipeTo self
+
+
+  def receive = {
+    case body : String => 
+      log.debug("receive message {} ", body)
+      for(link <- findLinks(body))
+        context.parent ! Controller.Check(link, depth)
+      context.stop(self)
+    case _: Status.failure => context.stop(self)
   }
+
+  def findLinks(body: String): Iterator[String] = {
+    val document = Jsoup.parse(body, url)
+    val links = document.select("a[href]")
+    for {
+      link <- links.iterator().asScala
+    } yield link.absUrl("href")
+  }
+
 }
