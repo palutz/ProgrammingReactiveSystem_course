@@ -41,7 +41,6 @@ class Getter(url: String, depth: Int) extends Actor with ActorLogging {
         context.parent ! Controller.Check(link, depth)
       context.stop(self)
     case _: Status.Failure => stopIt()
-    case Abort => stopIt()
   }
 
   def stopIt(): Unit = {
