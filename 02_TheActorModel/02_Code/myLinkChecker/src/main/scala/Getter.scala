@@ -16,8 +16,6 @@ import com.ning.http.client.AsyncHttpClient
 /* *****************
  This actor will process the body of the web page
  * **************** */
-
-
 class Getter(url: String, depth: Int) extends Actor with ActorLogging {
   implicit val executor = context.dispatcher.asInstanceOf[Executor with ExecutionContext]
   private val client = new MyAsyncWebClient
@@ -42,7 +40,13 @@ class Getter(url: String, depth: Int) extends Actor with ActorLogging {
       for(link <- findLinks(body))
         context.parent ! Controller.Check(link, depth)
       context.stop(self)
-    case _: Status.Failure => context.stop(self)
+    case _: Status.Failure => stopIt()
+    case Abort => stopIt()
+  }
+
+  def stopIt(): Unit = {
+    context.parent ! Done
+    context.stop(self)
   }
 
   def findLinks(body: String): Iterator[String] = {
