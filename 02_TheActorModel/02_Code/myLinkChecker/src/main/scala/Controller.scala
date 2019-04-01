@@ -26,19 +26,25 @@ class Controller extends Actor with ActorLogging {
   // but always sending msg to it
   context.system.scheduler.scheduleOnce(10.seconds, self, Timeout)
 
-  var cache : Set[String] = Set.empty
-  var children : Set[ActorRef] = Set.empty
+  override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 5) {
+    case _: Exception => SupervisorStrategy.Restart
+  }
+
+  var cache = Set.empty[String]
 
   def receive = {
-
     case Check(url, depth) =>
       log.debug("{} checking {}", depth, url)
       if (!cache(url) && depth > 0)
-        children += context.actorOf(Props(new Getter(url, depth - 1)))
+        // using the akka children structure
+        //children += context.actorOf(Props(new Getter(url, depth - 1)))
+        context.watch(context.actorOf(getterProps(url, depth - 1)))
       cache += url
+
     case Getter.Done =>
-      children -= sender
-      if (children.isEmpty) context.parent ! Result(cache)
+      if (context.children.isEmpty)
+        context.parent ! Result(cache)
+
     case Timeout => children foreach (_ ! Getter.Abort) // kill also all the children processes
   }
 }

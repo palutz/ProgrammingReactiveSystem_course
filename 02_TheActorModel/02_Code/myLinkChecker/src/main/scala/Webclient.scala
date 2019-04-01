@@ -10,7 +10,8 @@ trait WebClient {
   def get(url: String)(implicit exec: Executor): Future[String]
 }
 
-class MyAsyncWebClient extends WebClient {
+
+object MyAsyncWebClient extends WebClient {
   private val client = new AsyncHttpClient
 
   def get(url: String)(implicit ex : Executor): Future[String] = {
@@ -28,5 +29,16 @@ class MyAsyncWebClient extends WebClient {
         }
       }, ex)
     p.future
+  }
+
+  def shutdown(): Unit = client.close()
+}
+
+
+object MyWebClientTest extends App {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  MyAsyncWebClient get "http://www.google.com/" map println andThen {
+    case _ => MyAsyncWebClient.shutdown()
   }
 }
