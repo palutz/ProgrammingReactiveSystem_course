@@ -22,18 +22,17 @@ class Getter(url: String, depth: Int) extends Actor with ActorLogging {
   implicit val executor = context.dispatcher.asInstanceOf[Executor with ExecutionContext]
   private val client = new MyAsyncWebClient
 
-  // v1) with onComplete
+  // v1) *** with onComplete ***
   // val f = client get url
   // f onComplete {
   //   case Success(body) => self ! body
   //   case Failure(e) => self ! Status.Failure(e)
   // }
-
-  // v2) with pipeTo
+  // v2) *** with pipeTo ***
   // val f = client get url
   // f pipeTo self
 
-  // v3) all together
+  // v3) *** all together ***
   client get url pipeTo self
 
 
@@ -43,7 +42,7 @@ class Getter(url: String, depth: Int) extends Actor with ActorLogging {
       for(link <- findLinks(body))
         context.parent ! Controller.Check(link, depth)
       context.stop(self)
-    case _: Status.failure => context.stop(self)
+    case _: Status.Failure => context.stop(self)
   }
 
   def findLinks(body: String): Iterator[String] = {

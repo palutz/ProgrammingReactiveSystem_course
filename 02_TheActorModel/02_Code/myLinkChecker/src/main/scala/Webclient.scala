@@ -10,7 +10,7 @@ trait WebClient {
   def get(url: String)(implicit exec: Executor): Future[String]
 }
 
-class WebClient extends WebClient {
+class MyAsyncWebClient extends WebClient {
   private val client = new AsyncHttpClient
 
   def get(url: String)(implicit ex : Executor): Future[String] = {
