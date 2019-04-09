@@ -66,7 +66,10 @@ class BinaryTreeSet extends Actor {
 
   // optional
   /** Accepts `Operation` and `GC` messages. */
-  val normal: Receive = { case _ => ??? }
+  val normal: Receive = {
+    case Contains(r, qid, v) => root ! Contains(r, qid, v)
+    case Insert(r, qid, v) => root ! Insert(r, qid, v)
+  }
 
   // optional
   /** Handles messages while garbage collection is performed.
@@ -101,7 +104,32 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
 
   // optional
   /** Handles `Operation` messages and `CopyTo` requests. */
-  val normal: Receive = { case _ => ??? }
+  val normal: Receive = {
+    case Contains(requester, qid, value) => {
+      if((elem == value) && !removed) requester ! ContainsResult(qid, true)
+      else if(subtrees.isEmpty) requester ! ContainsResult(qid, false)
+      else if(value < elem && subtrees.contains(Left)) subtrees(Left) ! Contains(sender, qid, value)
+      else if(value > elem && subtrees.contains(Right)) subtrees(Right) ! Contains(sender, qid, value)
+      else requester ! ContainsResult(qid, false)
+    }
+    case Insert(requester, qid, value) => {
+      def addTo(p : Position) = {
+        subtrees.get(p) match {
+          case Some(a) => a ! Insert(requester, qid, value)
+          case _ => {
+            subtrees + (p -> context.actorOf(BinaryTreeNode.props(value, false), value.toString()))
+            requester ! OperationFinished(qid)
+            }
+        }
+      }
+      if(elem == value && removed) { removed = false; requester ! OperationFinished(qid) }
+      else if(value < elem) addTo(Left)
+      else if(value > elem) addTo(Right)
+      else requester ! OperationFinished(qid)
+    }
+    case Remove(requester, qid, value) => requester ! OperationFinished(qid)
+    case _ => ???
+  }
 
   // optional
   /** `expected` is the set of ActorRefs whose replies we are waiting for,
