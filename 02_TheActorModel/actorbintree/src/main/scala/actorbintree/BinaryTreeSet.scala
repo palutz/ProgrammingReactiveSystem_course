@@ -69,6 +69,14 @@ class BinaryTreeSet extends Actor {
   val normal: Receive = {
     case Contains(r, qid, v) => root ! Contains(r, qid, v)
     case Insert(r, qid, v) => root ! Insert(r, qid, v)
+    case Remove(r, qid, v) => root ! Remove(r, qid, v)
+    /*
+     case GC => {
+      val newRoot = context.actorOf(BinaryTreeNode.props(0, initiallyRemoved = true))
+      root ! CopyTo(newRoot)
+     context.become(garbageCollecting(newRoot))
+    }
+     */
   }
 
   // optional
@@ -77,7 +85,6 @@ class BinaryTreeSet extends Actor {
     * all non-removed elements into.
     */
   def garbageCollecting(newRoot: ActorRef): Receive = ???
-
 }
 
 object BinaryTreeNode {
@@ -106,18 +113,20 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
   /** Handles `Operation` messages and `CopyTo` requests. */
   val normal: Receive = {
     case Contains(requester, qid, value) => {
+      // println(s"$elem) Contains qid= $qid, value=$value")
       if((elem == value) && !removed) requester ! ContainsResult(qid, true)
       else if(subtrees.isEmpty) requester ! ContainsResult(qid, false)
-      else if(value < elem && subtrees.contains(Left)) subtrees(Left) ! Contains(sender, qid, value)
-      else if(value > elem && subtrees.contains(Right)) subtrees(Right) ! Contains(sender, qid, value)
+      else if(value < elem && subtrees.contains(Left)) subtrees(Left) ! Contains(requester, qid, value)
+      else if(value > elem && subtrees.contains(Right)) subtrees(Right) ! Contains(requester, qid, value)
       else requester ! ContainsResult(qid, false)
     }
     case Insert(requester, qid, value) => {
+      // println(s"$elem) insert qid= $qid, value=$value")
       def addTo(p : Position) = {
         subtrees.get(p) match {
           case Some(a) => a ! Insert(requester, qid, value)
           case _ => {
-            subtrees + (p -> context.actorOf(BinaryTreeNode.props(value, false), value.toString()))
+            subtrees = subtrees + (p -> context.actorOf(BinaryTreeNode.props(value, false), value.toString()))
             requester ! OperationFinished(qid)
             }
         }
@@ -127,8 +136,15 @@ class BinaryTreeNode(val elem: Int, initiallyRemoved: Boolean) extends Actor {
       else if(value > elem) addTo(Right)
       else requester ! OperationFinished(qid)
     }
-    case Remove(requester, qid, value) => requester ! OperationFinished(qid)
-    case _ => ???
+    case Remove(requester, qid, value) => {
+      // println(s"$elem) delete qid= $qid, value=$value")
+      def sendRemoveTo(p: Position) = subtrees.get(p).get ! Remove(requester, qid, value)
+
+      if(elem == value) { removed = true; requester ! OperationFinished(qid) }
+      else if((value < elem) && (subtrees.isDefinedAt(Left))) sendRemoveTo(Left)
+      else if((value > elem) && (subtrees.isDefinedAt(Right))) sendRemoveTo(Right)
+      else requester ! OperationFinished(qid)
+    }
   }
 
   // optional
