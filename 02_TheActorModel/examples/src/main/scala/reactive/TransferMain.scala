@@ -5,13 +5,14 @@ import akka.actor.Props
 import akka.event.LoggingReceive
 
 class TransferMain extends Actor {
+  import Banking._ 
   val accountA = context.actorOf(Props[BankAccount], "accountA")
   val accountB = context.actorOf(Props[BankAccount], "accountB")
 
-  accountA ! BankAccount.Deposit(100)
+  accountA ! Deposit(100)
 
   def receive = LoggingReceive {
-    case BankAccount.Done => transfer(150)
+    case Done => transfer(150)
   }
 
   def transfer(amount: BigInt): Unit = {

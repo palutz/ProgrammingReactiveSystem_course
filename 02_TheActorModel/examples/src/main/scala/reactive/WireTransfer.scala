@@ -15,21 +15,21 @@ class WireTransfer extends Actor {
   
   def receive = LoggingReceive {
     case Transfer(from, to, amount) =>
-      from ! BankAccount.Withdraw(amount)
+      from ! Banking.Withdraw(amount)
       context.become(awaitFrom(to, amount, sender))
   }
   
   def awaitFrom(to: ActorRef, amount: BigInt, customer: ActorRef): Receive = LoggingReceive {
-    case BankAccount.Done =>
-      to ! BankAccount.Deposit(amount)
+    case Banking.Done =>
+      to ! Banking.Deposit(amount)
       context.become(awaitTo(customer))
-    case BankAccount.Failed =>
+    case Banking.Failed =>
       customer ! Failed
       context.stop(self)
   }
   
   def awaitTo(customer: ActorRef): Receive = LoggingReceive {
-    case BankAccount.Done =>
+    case Banking.Done =>
       customer ! Done
       context.stop(self)
   }
